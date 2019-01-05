@@ -1,5 +1,5 @@
 defmodule Secio.Handshake do
-  alias Secio.Handshake.{Propose, Exchange, Key, Support}
+  alias Secio.Handshake.{Exchange, Key, Propose, Support}
   alias Secio.SecureStream
 
   def start(socket) do
