@@ -9,7 +9,7 @@ defmodule Secio.Session do
 
   def init(socket) do
     # http://erlang.org/doc/man/inet.html#setopts-2
-    :ok = :inet.setopts(socket, [:binary, packet: 4, active: false])
+    :ok = :inet.setopts(socket, [:binary, packet: 4, active: false, header: 0])
     {:ok, stream} = Handshake.start(socket)
 
     %Session{

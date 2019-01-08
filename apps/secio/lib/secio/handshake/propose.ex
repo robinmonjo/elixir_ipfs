@@ -1,10 +1,11 @@
 defmodule Secio.Handshake.Propose do
   alias Secio.Handshake.{Support, Proto}
+  alias Proto.Propose
 
   @nonce_size 16
 
   def start(socket) do
-    with {pub, priv, nonce} <- init_state,
+    with {pub, priv, nonce} <- init_state(),
          propose <- propose(pub, nonce),
          propose_bytes <- Propose.encode(propose),
          :ok <- :gen_tcp.send(socket, propose_bytes),
