@@ -11,8 +11,7 @@ defmodule Secio.Handshake do
          {:ok, stream, nonce_in} <- SecureStream.uncipher(stream, ciphered_nonce_in),
          true <- nonce_in == propose_state.nonce,
          {stream, ciphered_nonce} <- SecureStream.cipher(stream, propose_state.propose_in.rand),
-         :ok <- :gen_tcp.send(socket, ciphered_nonce)
-    do
+         :ok <- :gen_tcp.send(socket, ciphered_nonce) do
       {:ok, stream}
     else
       err -> err

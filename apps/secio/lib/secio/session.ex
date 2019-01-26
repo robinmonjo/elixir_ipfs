@@ -10,13 +10,17 @@ defmodule Secio.Session do
   def init(socket) do
     # http://erlang.org/doc/man/inet.html#setopts-2
     :ok = :inet.setopts(socket, [:binary, packet: 4, active: false, header: 0])
+
     case Handshake.start(socket) do
       {:ok, stream} ->
-        {:ok, %Session{
-          socket: socket,
-          secure_stream: stream
-        }}
-      err -> err
+        {:ok,
+         %Session{
+           socket: socket,
+           secure_stream: stream
+         }}
+
+      err ->
+        err
     end
   end
 

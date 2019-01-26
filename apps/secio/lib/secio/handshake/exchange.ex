@@ -14,14 +14,14 @@ defmodule Secio.Handshake.Exchange do
          signed_message <- signed_message(propose_state, exchange_in),
          pub <- remote_public_key_sequence(propose_state),
          :ok <- verify_signature(signed_message, pub, exchange_in),
-         secret <- shared_secret(exchange_in, e_priv, curve)
-    do
-      {:ok, %{
-        secret: secret,
-        order: order,
-        cipher: cipher,
-        hash: hash
-      }}
+         secret <- shared_secret(exchange_in, e_priv, curve) do
+      {:ok,
+       %{
+         secret: secret,
+         order: order,
+         cipher: cipher,
+         hash: hash
+       }}
     else
       err -> err
     end
@@ -41,8 +41,7 @@ defmodule Secio.Handshake.Exchange do
   defp exchange_params(p1, p2) do
     with {:ok, curve} <- first_match(p1.exchanges, p2.exchanges),
          {:ok, cipher} <- first_match(p1.ciphers, p2.ciphers),
-         {:ok, hash} <- first_match(p1.hashes, p2.hashes)
-    do
+         {:ok, hash} <- first_match(p1.hashes, p2.hashes) do
       {:ok, {curve, cipher, hash}}
     else
       {:error, :no_match} -> {:error, :no_consensus}
@@ -51,6 +50,7 @@ defmodule Secio.Handshake.Exchange do
 
   defp first_match(nil, _), do: {:error, :no_match}
   defp first_match(_, nil), do: {:error, :no_match}
+
   defp first_match(str1, str2) when is_binary(str1) and is_binary(str2) do
     first_match(String.split(str1, ","), String.split(str2, ","))
   end

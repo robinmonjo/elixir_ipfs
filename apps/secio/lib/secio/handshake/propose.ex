@@ -10,17 +10,17 @@ defmodule Secio.Handshake.Propose do
          propose_bytes <- Propose.encode(propose),
          :ok <- :gen_tcp.send(socket, propose_bytes),
          {:ok, propose_in_bytes} <- :gen_tcp.recv(socket, 0),
-         propose_in <- Propose.decode(propose_in_bytes)
-    do
-      {:ok, %{
-        public_key: pub,
-        private_key: priv,
-        nonce: nonce,
-        propose: propose,
-        propose_bytes: propose_bytes,
-        propose_in: propose_in,
-        propose_in_bytes: propose_in_bytes
-      }}
+         propose_in <- Propose.decode(propose_in_bytes) do
+      {:ok,
+       %{
+         public_key: pub,
+         private_key: priv,
+         nonce: nonce,
+         propose: propose,
+         propose_bytes: propose_bytes,
+         propose_in: propose_in,
+         propose_in_bytes: propose_in_bytes
+       }}
     else
       err -> err
     end
