@@ -3,7 +3,7 @@ defmodule Secio.Handshake.Exchange do
 
   def start(socket, propose_state) do
     with {:ok, order, {p1, p2}} <- select_order(propose_state),
-         {curve, cipher, hash} <- exchange_params(p1, p2),
+         {:ok, {curve, cipher, hash}} <- exchange_params(p1, p2),
          {e_pub, e_priv} <- ephemeral_keys(curve),
          signature <- signature(propose_state, e_pub),
          exchange <- exchange(e_pub, signature),
@@ -14,13 +14,16 @@ defmodule Secio.Handshake.Exchange do
          signed_message <- signed_message(propose_state, exchange_in),
          pub <- remote_public_key_sequence(propose_state),
          :ok <- verify_signature(signed_message, pub, exchange_in),
-         secret <- shared_secret(exchange_in, e_priv, curve) do
-      %{
+         secret <- shared_secret(exchange_in, e_priv, curve)
+    do
+      {:ok, %{
         secret: secret,
         order: order,
         cipher: cipher,
         hash: hash
-      }
+      }}
+    else
+      err -> err
     end
   end
 
@@ -36,21 +39,31 @@ defmodule Secio.Handshake.Exchange do
   end
 
   defp exchange_params(p1, p2) do
-    {
-      first_match(p1.exchanges, p2.exchanges),
-      first_match(p1.ciphers, p2.ciphers),
-      first_match(p1.hashes, p2.hashes)
-    }
+    with {:ok, curve} <- first_match(p1.exchanges, p2.exchanges),
+         {:ok, cipher} <- first_match(p1.ciphers, p2.ciphers),
+         {:ok, hash} <- first_match(p1.hashes, p2.hashes)
+    do
+      {:ok, {curve, cipher, hash}}
+    else
+      {:error, :no_match} -> {:error, :no_consensus}
+    end
   end
 
+  defp first_match(nil, _), do: {:error, :no_match}
+  defp first_match(_, nil), do: {:error, :no_match}
   defp first_match(str1, str2) when is_binary(str1) and is_binary(str2) do
     first_match(String.split(str1, ","), String.split(str2, ","))
   end
 
   defp first_match(list1, list2) when is_list(list1) and is_list(list2) do
-    Enum.find(list1, fn e1 ->
+    list1
+    |> Enum.find(fn e1 ->
       Enum.find(list2, &(&1 == e1))
     end)
+    |> case do
+      nil -> {:error, :no_match}
+      match -> {:ok, match}
+    end
   end
 
   defp ephemeral_keys(curve), do: :crypto.generate_key(:ecdh, Support.exchanges(curve))

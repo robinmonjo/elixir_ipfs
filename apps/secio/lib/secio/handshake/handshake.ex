@@ -3,16 +3,19 @@ defmodule Secio.Handshake do
   alias Secio.SecureStream
 
   def start(socket) do
-    with propose_state <- Propose.start(socket),
-         exchange_state <- Exchange.start(socket, propose_state),
+    with {:ok, propose_state} <- Propose.start(socket),
+         {:ok, exchange_state} <- Exchange.start(socket, propose_state),
          keys <- Key.compute(exchange_state),
          stream <- secure_stream(exchange_state, keys),
          {:ok, ciphered_nonce_in} <- :gen_tcp.recv(socket, 0),
          {:ok, stream, nonce_in} <- SecureStream.uncipher(stream, ciphered_nonce_in),
          true <- nonce_in == propose_state.nonce,
          {stream, ciphered_nonce} <- SecureStream.cipher(stream, propose_state.propose_in.rand),
-         :ok <- :gen_tcp.send(socket, ciphered_nonce) do
+         :ok <- :gen_tcp.send(socket, ciphered_nonce)
+    do
       {:ok, stream}
+    else
+      err -> err
     end
   end
 
