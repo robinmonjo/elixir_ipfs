@@ -16,7 +16,7 @@ defmodule Multistream do
     # receiving secio
     IO.puts("----------- #{content}")
 
-    session = Session.init(socket)
+    {:ok, session} = Session.init(socket)
 
     IO.inspect(session)
 
@@ -38,43 +38,86 @@ defmodule Multistream do
 
     # switching to mplex protocol :)
 
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
+    {:ok, multiplex} = Mplex.init(session)
+
+    :timer.sleep(5000) # waiting for all streams to be fine
+
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[0].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[1].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[2].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[3].id)
+    IO.puts data
+
+    # asking streams what they are up to
+    IO.puts "sending multistream"
+
+    #for {_id, stream} <- Mplex.state do
+    {:ok, session} = Mplex.write(session, Mplex.streams[0], "/multistream/1.0.0\n")
+    {:ok, session} = Mplex.write(session, Mplex.streams[1], "/multistream/1.0.0\n")
+    {:ok, session} = Mplex.write(session, Mplex.streams[2], "/multistream/1.0.0\n")
+    {:ok, session} = Mplex.write(session, Mplex.streams[3], "/multistream/1.0.0\n")
+    # end
+
+    IO.puts "Ok waiting for replies"
+    :timer.sleep(5000) # waiting for all streams to be fine
+
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[0].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[1].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[2].id)
+    IO.puts data
+    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[3].id)
+    IO.puts data
+
+
+
+
+
+
+
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
+
 
     # all stream initiated
-    IO.puts("-------- ok ------------")
-    {:ok, session} = write_mplex_stream(session, 0, 1, "/multistream/1.0.0\n")
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
+    # IO.puts("-------- ok ------------")
+    # {:ok, session} = write_mplex_stream(session, 0, 1, "/multistream/1.0.0\n")
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
 
-    {:ok, session} = write_mplex_stream(session, 1, 1, "/multistream/1.0.0\n")
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
+    # {:ok, session} = write_mplex_stream(session, 1, 1, "/multistream/1.0.0\n")
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
 
-    {:ok, session} = write_mplex_stream(session, 2, 1, "/multistream/1.0.0\n")
-    {:ok, session, data} = read_mplex_stream(session)
-    IO.inspect(data)
+    # {:ok, session} = write_mplex_stream(session, 2, 1, "/multistream/1.0.0\n")
+    # {:ok, session, data} = read_mplex_stream(session)
+    # IO.inspect(data)
   end
 
-  defp socket_opts, do: [:binary, packet: :raw, header: 1, active: false]
+  defp socket_opts, do: [:binary, packet: :raw, active: false]
 
   defp read(socket) do
     case :gen_tcp.recv(socket, 0) do
-      {:ok, [len | data]} ->
+      {:ok, data} ->
+        <<len::size(8), data::binary>> = data
         len = len - 1
         <<content::bytes-size(len), _::binary>> = data
         {:ok, content}
