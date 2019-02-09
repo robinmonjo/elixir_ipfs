@@ -72,11 +72,12 @@ defmodule Mplex.Multiplex do
 
   @impl true
   def handle_call({:write, id, data}, _from, {session, streams}) do
-    IO.inspect(streams[id])
     %Stream{initiator: initiator} = streams[id]
     flag = if initiator, do: 2, else: 1
     header = <<id::size(5), flag::size(3)>>
-    {:ok, session} = Session.write(session, header <> data)
+    len = <<byte_size(data)::size(8)>>
+    full_msg = header <> len <> data
+    {:ok, session} = Session.write(session, full_msg)
     {:reply, :ok, {session, streams}}
   end
 

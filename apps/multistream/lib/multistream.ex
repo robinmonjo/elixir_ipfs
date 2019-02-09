@@ -55,10 +55,10 @@ defmodule Multistream do
     IO.puts "sending multistream"
 
     #for {_id, stream} <- Mplex.state do
-    {:ok, session} = Mplex.write(session, Mplex.streams[0], "/multistream/1.0.0\n")
-    {:ok, session} = Mplex.write(session, Mplex.streams[1], "/multistream/1.0.0\n")
-    {:ok, session} = Mplex.write(session, Mplex.streams[2], "/multistream/1.0.0\n")
-    {:ok, session} = Mplex.write(session, Mplex.streams[3], "/multistream/1.0.0\n")
+    :ok = Mplex.write(Mplex.streams[0].id, sized_msg("/multistream/1.0.0\n"))
+    :ok = Mplex.write(Mplex.streams[1].id, sized_msg("/multistream/1.0.0\n"))
+    :ok = Mplex.write(Mplex.streams[2].id, sized_msg("/multistream/1.0.0\n"))
+    :ok = Mplex.write(Mplex.streams[3].id, sized_msg("/multistream/1.0.0\n"))
     # end
 
     IO.puts "Ok waiting for replies"
