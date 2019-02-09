@@ -5,21 +5,13 @@ defmodule Mplex.Listener do
   alias Secio.Session
 
   def start_link(session) do
-    Task.start_link(__MODULE__, :run, [session])
+    Task.start_link(__MODULE__, :read, [session])
   end
 
-  def run(session) do
-    read(session)
-  end
-
-  defp read(session) do
+  def read(session) do
     {:ok, session, data} = Session.read(session)
-    {:ok, session } = handle_incoming(session, data)
+    {:ok, session } = decode(session, data)
     read(session)
-  end
-
-  defp handle_incoming(session, data) do
-    decode(session, data)
   end
 
   # @new_stream 0

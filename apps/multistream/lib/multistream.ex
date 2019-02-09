@@ -40,76 +40,33 @@ defmodule Multistream do
 
     {:ok, multiplex} = Mplex.init(session)
 
-    :timer.sleep(5000) # waiting for all streams to be fine
+    :timer.sleep(2000) # waiting for all streams to be fine
 
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[0].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[1].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[2].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[3].id)
-    IO.puts data
+    for {id, _stream} <- Mplex.streams do
+      <<_len::size(8), data::binary>> = Mplex.read(id)
+      IO.puts data
+    end
 
     # asking streams what they are up to
     IO.puts "sending multistream"
 
-    #for {_id, stream} <- Mplex.state do
-    :ok = Mplex.write(Mplex.streams[0].id, sized_msg("/multistream/1.0.0\n"))
-    :ok = Mplex.write(Mplex.streams[1].id, sized_msg("/multistream/1.0.0\n"))
-    :ok = Mplex.write(Mplex.streams[2].id, sized_msg("/multistream/1.0.0\n"))
-    :ok = Mplex.write(Mplex.streams[3].id, sized_msg("/multistream/1.0.0\n"))
-    # end
+    for {id, _stream} <- Mplex.streams do
+      Mplex.write(id, sized_msg("/multistream/1.0.0\n"))
+    end
 
     IO.puts "Ok waiting for replies"
-    :timer.sleep(5000) # waiting for all streams to be fine
+    :timer.sleep(2000) # waiting for all streams to be fine
 
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[0].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[1].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[2].id)
-    IO.puts data
-    <<_len::size(8), data::binary>> = Mplex.read(Mplex.streams[3].id)
-    IO.puts data
+    protocols = for {id, _stream} <- Mplex.streams, into: %{} do
+      <<len::size(8), data::binary>> = Mplex.read(id)
+      len = len - 1
+      <<protocol::bytes-size(len), _::binary>> = data
+      {protocol, id}
+    end
 
+    IO.inspect(protocols)
 
-
-
-
-
-
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-
-
-    # all stream initiated
-    # IO.puts("-------- ok ------------")
-    # {:ok, session} = write_mplex_stream(session, 0, 1, "/multistream/1.0.0\n")
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-
-    # {:ok, session} = write_mplex_stream(session, 1, 1, "/multistream/1.0.0\n")
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
-
-    # {:ok, session} = write_mplex_stream(session, 2, 1, "/multistream/1.0.0\n")
-    # {:ok, session, data} = read_mplex_stream(session)
-    # IO.inspect(data)
+    kad_stream_id = protocols["/ipfs/kad/1.0.0"]
   end
 
   defp socket_opts, do: [:binary, packet: :raw, active: false]

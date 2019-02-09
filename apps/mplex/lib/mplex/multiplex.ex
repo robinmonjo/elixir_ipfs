@@ -59,10 +59,14 @@ defmodule Mplex.Multiplex do
   end
 
   @impl true
-  def handle_call({:receive, id, data}, _from, {session, streams}) do
-    s = streams[id]
-    s = %{s | data_in: s.data_in <> data }
-    {:reply, :ok, {session, Map.put(streams, id, s)}}
+  def handle_call({:receive, id, data}, _from, {session, streams} = state) do
+    case Map.fetch(streams, id) do
+      {:ok, s} ->
+        s = %{s | data_in: s.data_in <> data }
+        {:reply, :ok, {session, Map.put(streams, id, s)}}
+
+      _ -> {:reply, {:error, :stream_not_found}, state}
+    end
   end
 
   @impl true
