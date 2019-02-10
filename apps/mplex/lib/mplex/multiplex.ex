@@ -53,8 +53,15 @@ defmodule Mplex.Multiplex do
   end
 
   @impl true
-  def handle_call({:add_stream, id, initiator}, _from, {session, streams}) do
-    s = %Stream{id: id, initiator: initiator, status: :open}
+  def handle_call({:add_stream, id, false}, _from, {session, streams}) do
+    s = %Stream{id: id, initiator: false, status: :open}
+    {:reply, :ok, {session, Map.put(streams, id, s)}}
+  end
+
+  @impl true
+  def handle_call({:add_stream, id, true}, _from, {session, streams}) do
+    s = %Stream{id: id, initiator: true, status: :open}
+    {:ok, session} = write(session, id, 0, "")
     {:reply, :ok, {session, Map.put(streams, id, s)}}
   end
 
@@ -78,10 +85,7 @@ defmodule Mplex.Multiplex do
   def handle_call({:write, id, data}, _from, {session, streams}) do
     %Stream{initiator: initiator} = streams[id]
     flag = if initiator, do: 2, else: 1
-    header = <<id::size(5), flag::size(3)>>
-    len = <<byte_size(data)::size(8)>>
-    full_msg = header <> len <> data
-    {:ok, session} = Session.write(session, full_msg)
+    {:ok, session} = write(session, id, flag, data)
     {:reply, :ok, {session, streams}}
   end
 
@@ -91,4 +95,13 @@ defmodule Mplex.Multiplex do
     {s, data} = Stream.read(s)
     {:reply, data, {session, Map.put(streams, id, s)}}
   end
+
+  defp write(session, id, flag, data) do
+    header = <<id::size(5), flag::size(3)>>
+    len = <<byte_size(data)::size(8)>>
+    full_msg = header <> len <> data
+    Session.write(session, full_msg)
+  end
+
+
 end

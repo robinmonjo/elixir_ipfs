@@ -7,7 +7,7 @@ defmodule Multistream do
 
   def session(host) do
     {:ok, socket} = connect(host)
-    {:ok, content} = read(socket)
+    {:ok, _content} = read(socket)
     :ok = write(socket, "/multistream/1.0.0\n")
     # :ok = write(socket, "ls\n")
     # {:ok, content} = read(socket)
@@ -38,7 +38,7 @@ defmodule Multistream do
 
     # switching to mplex protocol :)
 
-    {:ok, multiplex} = Mplex.init(session)
+    {:ok, _multiplex} = Mplex.init(session)
 
     :timer.sleep(2000) # waiting for all streams to be fine
 
@@ -51,7 +51,7 @@ defmodule Multistream do
     IO.puts "sending multistream"
 
     for {id, _stream} <- Mplex.streams do
-      Mplex.write(id, sized_msg("/multistream/1.0.0\n"))
+      :ok = Mplex.write(id, sized_msg("/multistream/1.0.0\n"))
     end
 
     IO.puts "Ok waiting for replies"
@@ -67,6 +67,27 @@ defmodule Multistream do
     IO.inspect(protocols)
 
     kad_stream_id = protocols["/ipfs/kad/1.0.0"]
+
+    # :ok = Mplex.write(kad_stream_id, sized_msg("/ipfs/kad/1.0.0\n"))
+
+    Mplex.new_stream(8)
+
+    :ok = Mplex.write(8, sized_msg("/multistream/1.0.0\n"))
+    :ok = Mplex.write(8, sized_msg("/ipfs/kad/1.0.0\n"))
+
+    :timer.sleep(1000)
+
+    <<_len::size(8), data::binary>> = Mplex.read(8)
+    IO.puts data
+
+    ping = Multistream.DhtProto.Message.new(type: 5)
+    |> Multistream.DhtProto.Message.encode()
+    :ok = Mplex.write(8, sized_msg(ping))
+
+    :timer.sleep(1000)
+
+    <<_len::size(8), data::binary>> = Mplex.read(8)
+    Multistream.DhtProto.Message.decode(data)
   end
 
   defp socket_opts, do: [:binary, packet: :raw, active: false]
@@ -106,48 +127,5 @@ defmodule Multistream do
   defp connect(host) do
     [host, port] = String.split(host, ":")
     :gen_tcp.connect(to_charlist(host), String.to_integer(port), socket_opts(), 3_000)
-  end
-
-  @mplex_flags_labels %{
-    0 => :new_stream,
-    1 => :message_receiver,
-    2 => :message_initiator,
-    3 => :close_receiver,
-    4 => :close_initiator,
-    5 => :reset_receiver,
-    6 => :reset_initiator
-  }
-
-  defp read_mplex_stream(session) do
-    {:ok, session, data} = Session.read(session)
-    decoded_data = decode_mplex_data(data)
-
-    {:ok, session, decoded_data}
-  end
-
-  defp decode_mplex_data(<<stream_id::size(5), flag::size(3)>>) do
-    %{
-      stream_id: stream_id,
-      flag: flag,
-      flag_label: @mplex_flags_labels[flag],
-      data: nil
-    }
-  end
-
-  defp decode_mplex_data(<<stream_id::size(5), flag::size(3), data::binary>>) do
-    %{
-      stream_id: stream_id,
-      flag: flag,
-      flag_label: @mplex_flags_labels[flag],
-      data: data
-    }
-  end
-
-  defp write_mplex_stream(session, id, flag, data) do
-    msg = sized_msg(data)
-    len = <<byte_size(msg)::size(8)>>
-    header = <<id::size(5), flag::size(3)>>
-    full_msg = header <> len <> msg
-    Session.write(session, full_msg)
   end
 end

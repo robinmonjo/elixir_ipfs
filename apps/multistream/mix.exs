@@ -26,7 +26,8 @@ defmodule Multistream.MixProject do
   defp deps do
     [
       {:secio, in_umbrella: true},
-      {:mplex, in_umbrella: true}
+      {:mplex, in_umbrella: true},
+      {:exprotobuf, "~> 1.2.9"}
     ]
   end
 end

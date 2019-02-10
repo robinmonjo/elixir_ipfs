@@ -13,6 +13,7 @@ defmodule Mplex do
 
   def write(stream_id, data), do: Multiplex.write(stream_id, data)
   def read(stream_id), do: Multiplex.read(stream_id)
+  def new_stream(stream_id), do: Multiplex.add_stream(stream_id, true)
 
   def streams do
     Multiplex.streams

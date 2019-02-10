@@ -28,15 +28,20 @@ defmodule Mplex.Listener do
   end
 
   defp decode(session, <<id::size(5), 1::size(3), data::binary>>) do
-    IO.puts "message receiver for id #{id}, data: #{data}"
-    {Multiplex.receive(id, data), session}
+    IO.puts "message receiver for id #{id} ..."
+    read_all_data(session, id, data)
   end
 
   defp decode(session, <<id::size(5), 2::size(3), data::binary>>) do
-    IO.puts "message initiator for id #{id}, data: #{data}"
+    IO.puts "message initiator for id #{id} ..."
+    read_all_data(session, id, data)
+  end
+
+  defp read_all_data(session, id, data) do
     case data do
       <<len::size(8), data::binary>> ->
         {:ok, session, data} = read_secure(session, len, data)
+        IO.puts "data: #{data}"
         {Multiplex.receive(id, data), session}
       _ ->
         {:ok, session}
