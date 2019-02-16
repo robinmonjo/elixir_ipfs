@@ -2,12 +2,11 @@ defmodule Mplex.Multiplex do
   use GenServer
 
   alias Mplex.Stream
-  alias Secio.Session
 
   # Client
 
-  def start_link(session) do
-    GenServer.start_link(__MODULE__, session, name: __MODULE__)
+  def start_link(secio) do
+    GenServer.start_link(__MODULE__, secio, name: __MODULE__)
   end
 
   def streams do
@@ -100,8 +99,6 @@ defmodule Mplex.Multiplex do
     header = <<id::size(5), flag::size(3)>>
     len = <<byte_size(data)::size(8)>>
     full_msg = header <> len <> data
-    Session.write(session, full_msg)
+    Msgio.Writer.write(session, full_msg, 0)
   end
-
-
 end

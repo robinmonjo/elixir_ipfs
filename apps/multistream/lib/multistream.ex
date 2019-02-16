@@ -3,37 +3,37 @@ defmodule Multistream do
   Documentation for Multistream.
   """
 
-  alias Secio.Session
+  alias Msgio.{Reader, Writer}
 
   def session(host) do
     {:ok, socket} = connect(host)
-    {:ok, _content} = read(socket)
-    :ok = write(socket, "/multistream/1.0.0\n")
+    {:ok, _socket, _content} = Reader.read(socket)
+    {:ok, _socket} = Writer.write(socket, "/multistream/1.0.0\n")
     # :ok = write(socket, "ls\n")
     # {:ok, content} = read(socket)
-    :ok = write(socket, "/secio/1.0.0\n")
-    {:ok, content} = read(socket)
+    {:ok, _socket} = Writer.write(socket, "/secio/1.0.0\n")
+    {:ok, _socket, content} = Reader.read(socket)
     # receiving secio
     IO.puts("----------- #{content}")
 
-    {:ok, session} = Session.init(socket)
+    {:ok, session} = Secio.init(socket)
 
     IO.inspect(session)
 
-    {:ok, session, msg} = read_secure(session)
+    {:ok, session, msg} = Reader.read(session)
     IO.puts(msg)
 
-    {:ok, session} = write_secure(session, "/multistream/1.0.0\n")
-    {:ok, session} = write_secure(session, "ls\n")
-
-    {:ok, session, msg} = read_secure(session)
-
+    {:ok, session} = Writer.write(session, "/multistream/1.0.0\n")
+    {:ok, session} = Writer.write(session, "ls\n")
+    IO.puts "here"
+    {:ok, session, msg} = Reader.read(session)
+    IO.puts "not here"
     IO.puts(msg)
 
-    {:ok, session} = write_secure(session, "/mplex/6.7.0\n")
+    {:ok, session} = Writer.write(session, "/mplex/6.7.0\n")
 
     # receiving mplex
-    {:ok, session, msg} = read_secure(session)
+    {:ok, session, msg} = Reader.read(session)
     IO.puts(msg)
 
     # switching to mplex protocol :)
@@ -92,19 +92,6 @@ defmodule Multistream do
 
   defp socket_opts, do: [:binary, packet: :raw, active: false]
 
-  defp read(socket) do
-    case :gen_tcp.recv(socket, 0) do
-      {:ok, data} ->
-        <<len::size(8), data::binary>> = data
-        len = len - 1
-        <<content::bytes-size(len), _::binary>> = data
-        {:ok, content}
-
-      err ->
-        err
-    end
-  end
-
   defp read_secure(session) do
     {:ok, session, data} = Session.read(session)
     <<len::size(8), data::binary>> = data
@@ -119,8 +106,6 @@ defmodule Multistream do
   end
 
   defp write_secure(session, msg), do: Session.write(session, sized_msg(msg))
-
-  defp write(socket, msg), do: :gen_tcp.send(socket, sized_msg(msg))
 
   defp sized_msg(msg), do: <<byte_size(msg)::size(8)>> <> msg
 

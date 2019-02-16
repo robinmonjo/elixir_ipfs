@@ -27,6 +27,7 @@ defmodule Multistream.MixProject do
     [
       {:secio, in_umbrella: true},
       {:mplex, in_umbrella: true},
+      {:msgio, in_umbrella: true},
       {:exprotobuf, "~> 1.2.9"}
     ]
   end

@@ -25,7 +25,8 @@ defmodule Secio.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:exprotobuf, "~> 1.2.9"}
+      {:exprotobuf, "~> 1.2.9"},
+      {:msgio, in_umbrella: true}
     ]
   end
 end

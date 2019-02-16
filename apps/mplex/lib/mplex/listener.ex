@@ -2,16 +2,15 @@ defmodule Mplex.Listener do
   use Task
 
   alias Mplex.Multiplex
-  alias Secio.Session
 
-  def start_link(session) do
-    Task.start_link(__MODULE__, :read, [session])
+  def start_link(socket) do
+    Task.start_link(__MODULE__, :read, [socket])
   end
 
-  def read(session) do
-    {:ok, session, data} = Session.read(session)
-    {:ok, session } = decode(session, data)
-    read(session)
+  def read(socket) do
+    {:ok, socket, data} = Msgio.Reader.read_undelimited(socket)
+    {:ok, socket } = decode(socket, data)
+    read(socket)
   end
 
   # @new_stream 0
@@ -22,37 +21,21 @@ defmodule Mplex.Listener do
   # @reset_receiver 5
   # @reset_initiator 6
 
-  defp decode(session, <<id::size(5), 0::size(3), data::binary>>) do
+  defp decode(socket, <<id::size(5), 0::size(3), data::binary>>) do
     IO.puts "new stream with id #{id}, data: #{data}"
-    {Multiplex.add_stream(id), session}
+    {Multiplex.add_stream(id), socket}
   end
 
-  defp decode(session, <<id::size(5), 1::size(3), data::binary>>) do
-    IO.puts "message receiver for id #{id} ..."
-    read_all_data(session, id, data)
-  end
-
-  defp decode(session, <<id::size(5), 2::size(3), data::binary>>) do
-    IO.puts "message initiator for id #{id} ..."
-    read_all_data(session, id, data)
-  end
-
-  defp read_all_data(session, id, data) do
-    case data do
-      <<len::size(8), data::binary>> ->
-        {:ok, session, data} = read_secure(session, len, data)
-        IO.puts "data: #{data}"
-        {Multiplex.receive(id, data), session}
-      _ ->
-        {:ok, session}
+  defp decode(socket, <<id::size(5), flag::size(3), data::binary>>) when flag == 1 or flag == 2 do
+    IO.puts "message receiver/initiator for id #{id} ..."
+    {len, content, _rest} = Msgio.split_message(data)
+    {:ok, socket, full_content} = Msgio.read_to_length(socket, len, content)
+    case Multiplex.receive(id, full_content) do
+      {:error, :stream_not_found} ->
+        {:ok, socket}
+      :ok ->
+        {:ok, socket}
     end
-  end
-
-  defp read_secure(session, len, data) when byte_size(data) == len, do: {:ok, session, data}
-
-  defp read_secure(session, len, data) do
-    {:ok, session, content} = Session.read(session)
-    read_secure(session, len, data <> content)
   end
 
   defp decode(session, <<id::size(5), 3::size(3), data::binary>>) do
