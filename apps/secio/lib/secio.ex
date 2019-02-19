@@ -52,7 +52,6 @@ defimpl Msgio.Reader, for: Secio do
   def read(secio, header \\ 1) do
     case Secio.read(secio) do
       {:ok, secio, data} ->
-        IO.inspect(data)
         {len, content, _} = Msgio.split_message(data, header)
         Msgio.read_to_length(secio, len, content)
       err ->
@@ -60,9 +59,7 @@ defimpl Msgio.Reader, for: Secio do
     end
   end
 
-  def read_undelimited(secio) do
-    Secio.read(secio)
-  end
+  def read_undelimited(secio), do: Secio.read(secio)
 end
 
 defimpl Msgio.Writer, for: Secio do

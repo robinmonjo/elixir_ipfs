@@ -51,7 +51,7 @@ defmodule Multistream do
     IO.puts "sending multistream"
 
     for {id, _stream} <- Mplex.streams do
-      :ok = Mplex.write(id, sized_msg("/multistream/1.0.0\n"))
+      :ok = Mplex.write(id, Msgio.sized_message("/multistream/1.0.0\n"))
     end
 
     IO.puts "Ok waiting for replies"
@@ -72,8 +72,8 @@ defmodule Multistream do
 
     Mplex.new_stream(8)
 
-    :ok = Mplex.write(8, sized_msg("/multistream/1.0.0\n"))
-    :ok = Mplex.write(8, sized_msg("/ipfs/kad/1.0.0\n"))
+    :ok = Mplex.write(8, Msgio.sized_message("/multistream/1.0.0\n"))
+    :ok = Mplex.write(8, Msgio.sized_message("/ipfs/kad/1.0.0\n"))
 
     :timer.sleep(1000)
 
@@ -82,7 +82,7 @@ defmodule Multistream do
 
     ping = Multistream.DhtProto.Message.new(type: 5)
     |> Multistream.DhtProto.Message.encode()
-    :ok = Mplex.write(8, sized_msg(ping))
+    :ok = Mplex.write(8, Msgio.sized_message(ping))
 
     :timer.sleep(1000)
 
@@ -91,23 +91,6 @@ defmodule Multistream do
   end
 
   defp socket_opts, do: [:binary, packet: :raw, active: false]
-
-  defp read_secure(session) do
-    {:ok, session, data} = Session.read(session)
-    <<len::size(8), data::binary>> = data
-    read_secure(session, len, data)
-  end
-
-  defp read_secure(session, len, data) when byte_size(data) == len, do: {:ok, session, data}
-
-  defp read_secure(session, len, data) do
-    {:ok, session, content} = Session.read(session)
-    read_secure(session, len, data <> content)
-  end
-
-  defp write_secure(session, msg), do: Session.write(session, sized_msg(msg))
-
-  defp sized_msg(msg), do: <<byte_size(msg)::size(8)>> <> msg
 
   defp connect(host) do
     [host, port] = String.split(host, ":")
