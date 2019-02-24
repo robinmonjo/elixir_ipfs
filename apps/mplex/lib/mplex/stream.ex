@@ -29,11 +29,11 @@ defmodule Mplex.Stream do
     write_socket(socket, id, 0, "")
   end
 
-  def read(id) do
+  def read(id, blocking \\ true)
+  def read(id, false) do
     GenServer.call(via_tuple(id), :read)
   end
-
-  def blocking_read(id) do
+  def read(id, true) do
     GenServer.cast(via_tuple(id), {:blocking_read, self()})
     receive do
       {:read, msg} -> msg

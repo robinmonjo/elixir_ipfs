@@ -19,7 +19,6 @@ defmodule Mplex do
   end
 
   defdelegate write(id, socket, msg), to: Stream
-  defdelegate read(id), to: Stream
+  defdelegate read(id, blocking \\ true), to: Stream
   defdelegate new_stream(id, socket), to: Stream
-  defdelegate blocking_read(id), to: Stream
 end

@@ -25,9 +25,7 @@ defmodule Multistream do
 
     {:ok, session} = Writer.write(session, "/multistream/1.0.0\n")
     {:ok, session} = Writer.write(session, "ls\n")
-    IO.puts "here"
     {:ok, session, msg} = Reader.read(session)
-    IO.puts "not here"
     IO.puts(msg)
 
     {:ok, session} = Writer.write(session, "/mplex/6.7.0\n")
@@ -40,6 +38,29 @@ defmodule Multistream do
 
     {:ok, _multiplex} = Mplex.init(session)
 
+    # session = inspect_incoming_streams(session)
+
+    {:ok, session} = Mplex.new_stream(8, session)
+
+    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/multistream/1.0.0\n"))
+
+    <<_len::size(8), data::binary>> = Mplex.read(8)
+    IO.puts data
+
+    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/ipfs/kad/1.0.0\n"))
+
+    <<_len::size(8), data::binary>> = Mplex.read(8)
+    IO.puts data
+
+    ping = Multistream.DhtProto.Message.new(type: 5)
+    |> Multistream.DhtProto.Message.encode()
+    {:ok, _session} = Mplex.write(8, session, Msgio.sized_message(ping))
+
+    <<_len::size(8), data::binary>> = Mplex.read(8)
+    Multistream.DhtProto.Message.decode(data)
+  end
+
+  defp inspect_incoming_streams(session) do
     :timer.sleep(2000) # waiting for all streams to be fine
 
     for id <- Mplex.stream_ids do
@@ -58,7 +79,7 @@ defmodule Multistream do
       end)
 
     protocols = for id <- Mplex.stream_ids, into: %{} do
-      <<len::size(8), data::binary>> = Mplex.blocking_read(id)
+      <<len::size(8), data::binary>> = Mplex.read(id)
       len = len - 1
       <<protocol::bytes-size(len), _::binary>> = data
       {protocol, id}
@@ -69,25 +90,7 @@ defmodule Multistream do
     _kad_stream_id = protocols["/ipfs/kad/1.0.0"]
 
     # :ok = Mplex.write(kad_stream_id, sized_msg("/ipfs/kad/1.0.0\n"))
-
-    {:ok, session} = Mplex.new_stream(8, session)
-
-    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/multistream/1.0.0\n"))
-
-    <<_len::size(8), data::binary>> = Mplex.blocking_read(8)
-    IO.puts data
-
-    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/ipfs/kad/1.0.0\n"))
-
-    <<_len::size(8), data::binary>> = Mplex.blocking_read(8)
-    IO.puts data
-
-    ping = Multistream.DhtProto.Message.new(type: 5)
-    |> Multistream.DhtProto.Message.encode()
-    {:ok, _session} = Mplex.write(8, session, Msgio.sized_message(ping))
-
-    <<_len::size(8), data::binary>> = Mplex.blocking_read(8)
-    Multistream.DhtProto.Message.decode(data)
+    session
   end
 
   defp socket_opts, do: [:binary, packet: :raw, active: false]
