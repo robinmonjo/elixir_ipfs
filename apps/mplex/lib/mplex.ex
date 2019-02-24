@@ -3,18 +3,23 @@ defmodule Mplex do
   Documentation for Mplex.
   """
 
-  alias Mplex.{Listener, Multiplex}
+  alias Mplex.{Listener, Stream}
 
   def init(socket) do
-    DynamicSupervisor.start_child(Mplex.DynamicSupervisor, {Multiplex, socket})
     DynamicSupervisor.start_child(Mplex.DynamicSupervisor, {Listener, socket})
   end
 
-  def write(stream_id, data), do: Multiplex.write(stream_id, data)
-  def read(stream_id), do: Multiplex.read(stream_id) # TODO: make blocking reads
-  def new_stream(stream_id), do: Multiplex.add_stream(stream_id, true)
-
-  def streams do
-    Multiplex.streams
+  def stream_ids do
+    Supervisor.which_children(Mplex.DynamicSupervisor)
+    |> Enum.filter(&match?({_, _, _, [Mplex.Stream.Server]}, &1))
+    |> Enum.map(fn {_, pid, _, _} ->
+      [k | _] = Registry.keys(Mplex.Registry, pid)
+      k
+    end)
   end
+
+  defdelegate write(id, socket, msg), to: Stream
+  defdelegate read(id), to: Stream
+  defdelegate new_stream(id, socket), to: Stream
+  defdelegate blocking_read(id), to: Stream
 end

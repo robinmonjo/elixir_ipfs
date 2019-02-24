@@ -10,7 +10,8 @@ defmodule Mplex.Application do
     children = [
       # Starts a worker by calling: Mplex.Worker.start_link(arg)
       # {Mplex.Worker, arg}
-      {DynamicSupervisor, strategy: :one_for_one, name: Mplex.DynamicSupervisor}
+      {DynamicSupervisor, strategy: :one_for_one, name: Mplex.DynamicSupervisor},
+      {Registry, keys: :unique, name: Mplex.Registry}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
