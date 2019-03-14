@@ -1,2 +1,3 @@
 # ElixirIpfs
 
+Ok I can get a list of providers for a file. Now how can I actually get this file back ?? To be continued ...
