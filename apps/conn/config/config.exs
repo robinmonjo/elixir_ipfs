@@ -10,11 +10,11 @@ use Mix.Config
 
 # You can configure your application as:
 #
-#     config :msgio, key: :value
+#     config :conn, key: :value
 #
 # and access this configuration in your application as:
 #
-#     Application.get_env(:msgio, :key)
+#     Application.get_env(:conn, :key)
 #
 # You can also configure a third-party app:
 #

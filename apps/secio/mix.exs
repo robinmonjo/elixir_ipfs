@@ -26,7 +26,7 @@ defmodule Secio.MixProject do
   defp deps do
     [
       {:exprotobuf, "~> 1.2.9"},
-      {:msgio, in_umbrella: true}
+      {:conn, in_umbrella: true}
     ]
   end
 end

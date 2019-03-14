@@ -1,6 +1,8 @@
 defmodule Mplex.Stream do
   alias __MODULE__
 
+  import Conn, only: [wrap: 2]
+
   defstruct [
     :id,
     :initiator,
@@ -14,10 +16,10 @@ defmodule Mplex.Stream do
     :ok
   end
 
-  def new_stream(id, socket) do
+  def new_stream(id, conn) do
     %Stream{id: id, initiator: true}
     |> start_stream
-    |> announce_stream(socket)
+    |> announce_stream(conn)
   end
 
   defp start_stream(stream) do
@@ -25,8 +27,8 @@ defmodule Mplex.Stream do
     stream
   end
 
-  defp announce_stream(%Stream{id: id}, socket) do
-    write_socket(socket, id, 0, "")
+  defp announce_stream(%Stream{id: id}, conn) do
+    write_conn(conn, id, 0, "")
   end
 
   def read(id, blocking \\ true)
@@ -53,24 +55,22 @@ defmodule Mplex.Stream do
     GenServer.cast(via_tuple(id), :stop)
   end
 
-  def write(%Stream{id: id, initiator: true}, socket, msg) do
-    write_socket(socket, id, 2, msg)
+  def write(%Stream{id: id, initiator: true}, conn, msg) do
+    write_conn(conn, id, 2, msg)
   end
 
-  def write(%Stream{id: id, initiator: false}, socket, msg) do
-    write_socket(socket, id, 1, msg)
+  def write(%Stream{id: id, initiator: false}, conn, msg) do
+    write_conn(conn, id, 1, msg)
   end
 
-  def write(id, socket, msg) do
+  def write(id, conn, msg) do
     GenServer.call(via_tuple(id), :stream)
-    |> write(socket, msg)
+    |> write(conn, msg)
   end
 
-  defp write_socket(socket, id, flag, msg) do
+  defp write_conn(conn, id, flag, msg) do
     header = <<id::size(5), flag::size(3)>>
-    len = <<byte_size(msg)::size(8)>>
-    full_msg = header <> len <> msg
-    Msgio.Writer.write(socket, full_msg, 0)
+    Conn.write(conn, header <> wrap(msg, :varint))
   end
 
   defp via_tuple(id) do

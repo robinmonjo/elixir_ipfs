@@ -3,16 +3,16 @@ defmodule Multistream do
   Documentation for Multistream.
   """
 
-  alias Msgio.{Reader, Writer}
+  import Conn, only: [wrap: 2, unwrap: 2]
 
   def session(host) do
     {:ok, socket} = connect(host)
-    {:ok, _socket, _content} = Reader.read(socket)
-    {:ok, _socket} = Writer.write(socket, "/multistream/1.0.0\n")
+    {:ok, _socket, _content} = Conn.read(socket, :one_byte)
+    {:ok, _socket} = Conn.write(socket, "/multistream/1.0.0\n", :one_byte)
     # :ok = write(socket, "ls\n")
     # {:ok, content} = read(socket)
-    {:ok, _socket} = Writer.write(socket, "/secio/1.0.0\n")
-    {:ok, _socket, content} = Reader.read(socket)
+    {:ok, _socket} = Conn.write(socket, "/secio/1.0.0\n", :one_byte)
+    {:ok, _socket, content} = Conn.read(socket, :one_byte)
     # receiving secio
     IO.puts("----------- #{content}")
 
@@ -20,18 +20,18 @@ defmodule Multistream do
 
     IO.inspect(session)
 
-    {:ok, session, msg} = Reader.read(session)
+    {:ok, session, msg} = Conn.read(session, :one_byte)
     IO.puts(msg)
 
-    {:ok, session} = Writer.write(session, "/multistream/1.0.0\n")
-    {:ok, session} = Writer.write(session, "ls\n")
-    {:ok, session, msg} = Reader.read(session)
+    {:ok, session} = Conn.write(session, "/multistream/1.0.0\n", :one_byte)
+    {:ok, session} = Conn.write(session, "ls\n", :one_byte)
+    {:ok, session, msg} = Conn.read(session, :one_byte)
     IO.puts(msg)
 
-    {:ok, session} = Writer.write(session, "/mplex/6.7.0\n")
+    {:ok, session} = Conn.write(session, "/mplex/6.7.0\n", :one_byte)
 
     # receiving mplex
-    {:ok, session, msg} = Reader.read(session)
+    {:ok, session, msg} = Conn.read(session, :one_byte)
     IO.puts(msg)
 
     # switching to mplex protocol :)
@@ -42,30 +42,48 @@ defmodule Multistream do
 
     {:ok, session} = Mplex.new_stream(8, session)
 
-    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/multistream/1.0.0\n"))
+    {:ok, session} = Mplex.write(8, session, wrap("/multistream/1.0.0\n", :one_byte))
 
-    <<_len::size(8), data::binary>> = Mplex.read(8)
-    IO.puts data
+    Mplex.read(8)
+    |> unwrap(:one_byte)
+    |> IO.puts
 
-    {:ok, session} = Mplex.write(8, session, Msgio.sized_message("/ipfs/kad/1.0.0\n"))
+    {:ok, session} = Mplex.write(8, session, wrap("/ipfs/kad/1.0.0\n", :one_byte))
 
-    <<_len::size(8), data::binary>> = Mplex.read(8)
-    IO.puts data
+    Mplex.read(8)
+    |> unwrap(:one_byte)
+    |> IO.puts
 
     ping = Multistream.DhtProto.Message.new(type: 5)
     |> Multistream.DhtProto.Message.encode()
-    {:ok, _session} = Mplex.write(8, session, Msgio.sized_message(ping))
+    {:ok, session} = Mplex.write(8, session, wrap(ping, :varint))
 
-    <<_len::size(8), data::binary>> = Mplex.read(8)
-    Multistream.DhtProto.Message.decode(data)
+    Mplex.read(8)
+    |> unwrap(:varint)
+    |> Multistream.DhtProto.Message.decode()
+    |> IO.inspect()
+
+    cid = <<18, 32, 114, 55, 167, 244, 9, 26, 116, 174, 149, 81, 72, 144, 250, 134, 162, 232, 163, 96, 55, 195, 80, 234, 113, 192, 106, 52, 200, 203, 226, 90, 80, 87>>
+
+    msg =
+      Multistream.DhtProto.Message.new(key: cid, type: 3, clusterLevelRaw: 0)
+      |> IO.inspect(base: :hex)
+      |> Multistream.DhtProto.Message.encode()
+
+    {:ok, session} = Mplex.write(8, session, wrap(msg, :varint))
+
+    Mplex.read(8)
+    |> unwrap(:varint)
+    |> Multistream.DhtProto.Message.decode()
   end
 
   defp inspect_incoming_streams(session) do
     :timer.sleep(2000) # waiting for all streams to be fine
 
     for id <- Mplex.stream_ids do
-      <<_len::size(8), data::binary>> = Mplex.read(id)
-      IO.puts data
+      Mplex.read(id)
+      |> unwrap(:one_byte)
+      |> IO.puts()
     end
 
     # asking streams what they are up to
@@ -74,22 +92,17 @@ defmodule Multistream do
     session =
       Mplex.stream_ids
       |> Enum.reduce(session, fn (id, session) ->
-        {:ok, session} = Mplex.write(id, session, Msgio.sized_message("/multistream/1.0.0\n"))
+        {:ok, session} = Mplex.write(id, session, wrap("/multistream/1.0.0\n", :one_byte))
         session
       end)
 
     protocols = for id <- Mplex.stream_ids, into: %{} do
-      <<len::size(8), data::binary>> = Mplex.read(id)
-      len = len - 1
-      <<protocol::bytes-size(len), _::binary>> = data
+      data = Mplex.read(id)
+      protocol = unwrap(data, :one_byte)
       {protocol, id}
     end
 
     IO.inspect(protocols)
-
-    _kad_stream_id = protocols["/ipfs/kad/1.0.0"]
-
-    # :ok = Mplex.write(kad_stream_id, sized_msg("/ipfs/kad/1.0.0\n"))
     session
   end
 

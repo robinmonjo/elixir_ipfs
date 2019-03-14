@@ -5,8 +5,8 @@ defmodule Mplex do
 
   alias Mplex.{Listener, Stream}
 
-  def init(socket) do
-    DynamicSupervisor.start_child(Mplex.DynamicSupervisor, {Listener, socket})
+  def init(conn) do
+    DynamicSupervisor.start_child(Mplex.DynamicSupervisor, {Listener, conn})
   end
 
   def stream_ids do
@@ -18,7 +18,7 @@ defmodule Mplex do
     end)
   end
 
-  defdelegate write(id, socket, msg), to: Stream
+  defdelegate write(id, conn, msg), to: Stream
   defdelegate read(id, blocking \\ true), to: Stream
-  defdelegate new_stream(id, socket), to: Stream
+  defdelegate new_stream(id, conn), to: Stream
 end

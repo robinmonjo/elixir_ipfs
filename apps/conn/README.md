@@ -1,21 +1,21 @@
-# Msgio
+# Conn
 
 **TODO: Add description**
 
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `msgio` to your list of dependencies in `mix.exs`:
+by adding `conn` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:msgio, "~> 0.1.0"}
+    {:conn, "~> 0.1.0"}
   ]
 end
 ```
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/msgio](https://hexdocs.pm/msgio).
+be found at [https://hexdocs.pm/conn](https://hexdocs.pm/conn).
 

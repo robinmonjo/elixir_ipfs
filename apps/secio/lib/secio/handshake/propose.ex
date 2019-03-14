@@ -8,8 +8,8 @@ defmodule Secio.Handshake.Propose do
     with {pub, priv, nonce} <- init_state(),
          propose <- propose(pub, nonce),
          propose_bytes <- Propose.encode(propose),
-         {:ok, _socket} <- Msgio.Writer.write(socket, propose_bytes, 0),
-         {:ok, _socket, propose_in_bytes} <- Msgio.Reader.read(socket, 0),
+         {:ok, _socket} <- Conn.write(socket, propose_bytes),
+         {:ok, _socket, propose_in_bytes} <- Conn.read(socket),
          propose_in <- Propose.decode(propose_in_bytes) do
       {:ok,
        %{
